@@ -2,36 +2,45 @@
 Vue.component("app-header", {
   template: `
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-      <a class="navbar-brand" href="#">Lab 7</a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-    
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <a class="navbar-brand" href="/">Photogram</a>
+       <div>
         <ul class="navbar-nav mr-auto">
-          <li class="nav-item active">
-            <router-link class="nav-link" to="/">Home <span class="sr-only">(current)</span></router-link>
-          </li>
           <li class="nav-item">
-          <a class="nav-link" href=""
-            >Explore <span class="sr-only">(current)</span></a
-          >
-        </li>
+          <router-link class="nav-link" to="/explore">Explore<span class="sr-only">(current)</span></router-link>
+          </li>
         <li class="nav-item">
-          <a class="nav-link" href=""
-            >My Profile <span class="sr-only">(current)</span></a
-          >
+           <router-link class="nav-link" to="/users/0">My Profile<span class="sr-only">(current)</span></router-link>
         </li>
+             <li class="nav-item">
+           <router-link class="nav-link" to="/posts/new">New Post<span class="sr-only">(current)</span></router-link>
+        </li>
+ 
         <li class="nav-item">
-          <a class="nav-link" href=""
-            >Logout <span class="sr-only">(current)</span></a
-          >
+           <router-link class="nav-link" to="/">Logout<span class="sr-only">(current)</span></router-link>
         </li>
         </ul>
       </div>
     </nav>
+
     `,
+  data: function(){
+    return {
+      div:"",
+      id:0
+    }
+  },
+  created:async function(){
+        const session = await fetch('/api/session');
+       	const data = await session.json();
+       	if (data.message!=0){
+       	  this.id=data.message;
+       	}
+        
+  },
+
+
 });
+
 
 const Home = Vue.component("home", {
   template: `
@@ -49,6 +58,11 @@ const Home = Vue.component("home", {
   data: function () {
     return {};
   },
+  created:async function(){
+        const session = await fetch('/api/auth/logout');
+       	const data = await session.json();
+     
+  }
 });
 
 
@@ -64,17 +78,16 @@ const Register = Vue.component("register-form", {
             async post() {
       let headers = {
     'Content-Type': 'application/json'
-  };
+  };      
        var obj =  {
-    biography: "Dolor et aute non officia laborum aliquip dolor fugiat sunt culpa cupidatat. Consectetur id laboris excepteur voluptate voluptate consectetur elit eu ullamco laboris irure commodo culpa exercitation. Ex id laborum ad dolor aliqua veniam veniam.\r\n", 
-    email: "jillianbeasley@papricut.com", 
-    first_name: "Gallegos", 
-    last_name: "Bailey", 
-    location: "Drummond", 
-    password: "Beasley", 
-    photo: "http://placehold.it/32x32", 
-    username: "Jillian"
-  };
+    biography: this.biography, 
+    email: this.email, 
+    first_name: this.fname, 
+    last_name:this.lname, 
+    location: this.location, 
+    password: this.password, 
+    username: this.username
+    };
       	const request = new Request(
         		'/api/users/register',
         {
@@ -85,9 +98,31 @@ const Register = Vue.component("register-form", {
         },
 
       );
+      const res = await fetch(request);
+        const data = await res.json();
+        router.push({ path: '/login' });
+        alert(JSON. stringify(data));
+            
+              
+            }     
+,
+          async postPhoto() {
+              const formData  = new FormData();
+              formData.append("image",this.photo);
+  let headers2 = {
+    'Content-Type': 'multipart/form-data'
+  };
+    const request = new Request(
+        		'/api/users/addphoto/'+this.username,
+        {
+          method: "POST",
+          headers2,
+          body: formData
+
+        },
+      );
         const res = await fetch(request);
         const data = await res.json();
-        this.data = data;
         alert(JSON. stringify(data));
             
               
@@ -111,13 +146,13 @@ const Register = Vue.component("register-form", {
   <br>
   <input v-model="biography" placeholder="biography">
   <br>
-    <input v-model="gender" placeholder="gender">
+    <input v-model="location" placeholder="location">
   <br>
-
       <input v-model="email" placeholder="email">
   <br>
-      <input v-model="photo" placeholder="photo">
+  <input v-model="photo" type="file">
   <br>
+  <button v-on:click="postPhoto">Upload Photo</button>  
 
   <button v-on:click="post">Register</button>  
   </div>
@@ -125,35 +160,153 @@ const Register = Vue.component("register-form", {
 });
 
 const Login = Vue.component("login-form", {
-  template: `
-    <div>
-  <h4>Login</h4>
-  <form
-  v-on:submit.prevent=""
-  method="POST"
-  action="/api/auth/login"
-  enctype="multipart/form-data"
-  id="loginForm"
-  >
-  <div class="myform">
-    <div class="section">
-      <label>Username</label>
-      <input type="text" name="username" />
-    </div>
-    <div class="section">
-      <label>Password</label>
-      <input type="password" name="password" />
-    </div>
-    </div>
-    <div class="section"><button type="submit">Login</button></div>
-</form>
-</div>
-   `,
-  data: function () {
-    return {};
-  },
+  template: 
+  ` 
+  <div>
+  <input v-model="username" placeholder="username">
+  <br>
+  <input v-model="password" placeholder="password">
+  <br>
+  <button v-on:click="post">Login</button>  
+  </div>
+`,
+methods: {
+  async post(){
+          let headers = {
+    'Content-Type': 'application/json'
+  };
+
+           var obj =  {
+    password: this.password, 
+    username: this.username
+  };
+      	const request = new Request(
+        		'/api/auth/login',
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(obj)
+
+        },
+
+      );
+        const res = await fetch(request);
+        const data = await res.json();
+        const json = JSON.stringify(data);
+        alert(json);
+        router.push({ path: '/explore' });
+  }
+}
+});
+const Posts = Vue.component("post-form", {
+  template: 
+  ` 
+  <div>
+  <br>
+      <input v-model="email" placeholder="email">
+  <br>
+  <input v-model="photo" type="file">
+  <br>
+  <button v-on:click="postPhoto">Upload Photo</button>  
+  </div>
+`,
+methods: {
+  async post(){
+          let headers = {
+    'Content-Type': 'application/json'
+  };
+
+           var obj =  {
+    password: this.password, 
+    username: this.username
+  };
+      	const request = new Request(
+        		'/api/auth/login',
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(obj)
+
+        },
+
+      );
+        const res = await fetch(request);
+        const data = await res.json();
+        const json = JSON.stringify(data);
+        alert(json);
+        router.push({ path: '/explore' });
+  }
+}
 });
 
+
+const Explore = Vue.component("explore", {
+  
+  created:async function(){
+        const res = await fetch('/api/posts');
+  				const data = await res.json();
+          this.posts = JSON. stringify(data);
+ 
+  },
+  
+  data: function () {
+    return {
+    posts: 'Loading'
+  }
+ },
+
+  template: 
+  ` 
+  <div>
+  {{ posts }}
+  </div>
+`,
+methods: {
+      async  get() { 
+         const res = await fetch('/api/posts');
+  				const data = await res.json();
+          alert(JSON. stringify(data));
+          this.posts = JSON. stringify(data);
+          
+      }
+}
+});
+const Users = Vue.component("users", {
+  created:async function(){
+        const res = await fetch('/api/user/'+this.$route.params.id);
+  	   const res2 = await fetch('/api/users/'+this.$route.params.id+'/posts');
+  				const data = await res.json();
+          const data2 = await res2.json();
+          this.info = JSON. stringify(data);
+          this.posts = JSON. stringify(data2);
+
+  },
+  
+  data: function () {
+    return {
+    info: 'Loading',
+    posts: 'Loading'
+  }
+ },
+  template: 
+  ` 
+  <div>
+  {{ info }}
+  <br>
+  <br>
+  {{ posts }}
+  </div>
+`,
+methods: {
+      async  get() { 
+         const res = await fetch('/api/info');
+  				const data = await res.json();
+          alert(JSON. stringify(data));
+          this.info = JSON. stringify(data);
+          
+      }
+}
+});
 const NotFound = Vue.component("not-found", {
   template: `
     <div>
@@ -165,15 +318,15 @@ const NotFound = Vue.component("not-found", {
   },
 });
 
-// Define Routes
 const router = new VueRouter({
   mode: "history",
   routes: [
     { path: "/", component: Home },
-    // Put other routes here
     { path: "/register", component: Register },
     { path: "/login", component: Login },
-    // This is a catch all route in case none of the above matches
+    { path: "/explore", component: Explore },
+    { path: "/posts/new", component: Posts },
+    { path: "/users/:id", component: Users, props: true  },
     { path: "*", component: NotFound },
   ],
 });
