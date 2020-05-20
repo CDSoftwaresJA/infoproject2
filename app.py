@@ -3,8 +3,8 @@ from flask_wtf import FlaskForm
 from wtforms import FileField,StringField
 from flask_uploads import configure_uploads, IMAGES, UploadSet
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 app = Flask(__name__)
-
 app.config.from_object(__name__)
 app.config['SECRET_KEY'] = 'some$3cretKey'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://icmwuvgxqphskl:29518807a50b98eff4637464f45393efd41a9e80b3dff925af7c55e28e967b28@ec2-54-210-128-153.compute-1.amazonaws.com:5432/d9u7e52sn8k5ti'
@@ -83,11 +83,10 @@ db.create_all()
 def api_test():
     return jsonify({"username":session['username'],"password":session['password']})
 
-@app.route('/api/users/register', methods=['POST','GET']) 
+@app.route('/api/users/register', methods=['POST']) 
 def api_register():
     content=request.json
-    data=Users(content['first_name'], content['last_name'],content['username'],content['password'], content['gender'], content['email'], content['location'],
-                 content['biography'], content['photo'])
+    data=Users(content['first_name'], content['last_name'],content['username'],content['password'],"Male", content['email'], content['location'],content['biography'],content['photo'])
     db.session.add(data)
     db.session.flush()
     db.session.commit()
@@ -109,6 +108,24 @@ def api_logout():
     session.pop('username', None)
     session.pop('password', None)
     return jsonify({"message:":"User successfully logged out"})
+
+@app.route('/api/users', methods=['GET']) 
+def api_users():
+    dataJson = []
+    users = Users.query.all()
+    for user in users:
+        dataJson.append({
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'username': user.username,
+        'password': user.password,
+        'email': user.email,
+        'location': user.location,
+        'biography': user.biography,
+         'photo': user.profile_photo,
+        })            
+    return jsonify(dataJson)
+
 
 @app.route('/api/users/<string:id>/posts', methods=['POST','GET']) 
 def api_posts(id):
@@ -172,23 +189,22 @@ def format_date_joined():
     date_joined = now  # a specific date
     return date_joined.strftime("%B %V, %Y")
 
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def index(path):
+    """
+    Because we use HTML5 history mode in vue-router we need to configure our
+    web server to redirect all routes to index.html. Hence the additional route
+    "/<path:path".
+    Also we will render the initial webpage and then let VueJS take control.
+    """
+    return render_template('index.html')
+@app.errorhandler(404)
+def page_not_found(error):
 
-@app.route('/add', methods=['POST','GET']) 
-def profile_add():
-    PhotoForm = EmailPasswordForm()
-    if request.method == 'POST':
-        picture=PhotoForm.picture.data
-        print(picture)
-        filename = images.save(PhotoForm.picture.data)
-        filename= filename
-        data=User(1,PhotoForm.fname.data,PhotoForm.lname.data,PhotoForm.gender.data,PhotoForm.email.data,PhotoForm.biography.data,filename)
-        db.session.add(data)
-        db.session.flush()
-        db.session.commit()
-        return profiles()
-    if request.method == 'GET':
-        return render_template("addUser.html",form=PhotoForm)
-    return "Form not validated"    
+    """Custom 404 page."""
+
+    return render_template("404.html"), 404
 
 
 if __name__ == '__main__':
